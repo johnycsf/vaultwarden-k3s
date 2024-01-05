@@ -36,13 +36,13 @@ spec:
           value: "true"
         ports:
         - containerPort: 80
+        volumeMounts:
+        - name: vaultwarden
+          mountPath: /data
       volumes:
       - name: vaultwarden
         persistentVolumeClaim:
           claimName: vaultwarden-pvc
-        volumeMounts:
-        - name: vaultwarden
-          mountPath: /data
 
 ---
 
