@@ -9,7 +9,10 @@ spec:
   storageClassName: longhorn
   resources:
     requests:
-      storage: 1Gi  # Adjust the storage size as needed
+      storage: 1Gi  
+  volumeName: "vaultwarden-pvc"  
+  mountOptions:
+    - vers=4.1  
 
 ---
 
