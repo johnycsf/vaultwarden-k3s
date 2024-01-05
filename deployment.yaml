@@ -36,6 +36,9 @@ spec:
           value: "true"
         ports:
         - containerPort: 80
+        volumeMounts:                  # Add this section
+        - name: vaultwarden
+          mountPath: /data             # Mount the volume at /data
       volumes:
       - name: vaultwarden
         persistentVolumeClaim:
