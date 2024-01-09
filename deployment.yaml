@@ -4,7 +4,7 @@ metadata:
   name: vaultwarden-deployment
   namespace: vaultwarden
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: vaultwarden
@@ -18,7 +18,7 @@ spec:
         image: vaultwarden/server:latest
         env:
         - name: SIGNUPS_ALLOWED
-          value: "true"
+          value: "true" #change to false if you don't want anyone else to create accounts
         ports:
         - containerPort: 80
         volumeMounts:
