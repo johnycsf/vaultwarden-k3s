@@ -4,6 +4,7 @@ I used rancher to install LongHorn using its helm repo inside rancher.
 In rancher, go to your cluster, select Apps, Charts, and search for LongHorn and click on Install.
 
 First step is to create the vaultwarden namespace in your Master node.
+
 $ kubectl create namespace vaultwarden
 
 Then, create the service to expose the application on port 30001. (I am using NodePort)
