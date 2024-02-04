@@ -19,6 +19,8 @@ spec:
         env:
         - name: SIGNUPS_ALLOWED
           value: "true" #change to false if you don't want anyone else to create accounts
+        - name: ADMIN_TOKEN
+          value: "Generate_a_random_token"
         ports:
         - containerPort: 80
         volumeMounts:
