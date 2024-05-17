@@ -16,6 +16,7 @@ spec:
       containers:
       - name: vaultwarden
         image: vaultwarden/server:latest
+        imagePullPolicy: Always
         env:
         - name: SIGNUPS_ALLOWED
           value: "true" #change to false if you don't want anyone else to create accounts
