@@ -1,0 +1,3 @@
+.admin-token
+.env
+*.local

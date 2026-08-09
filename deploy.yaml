@@ -1,0 +1,110 @@
+# Vaultwarden on k3s — single-file deploy for a homelab
+# Docs: https://github.com/dani-garcia/vaultwarden/wiki
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vaultwarden
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vaultwarden-data
+  namespace: vaultwarden
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 10Gi
+---
+# ADMIN_TOKEN is created by install.sh (do not commit real secrets).
+# Plain placeholder keeps `kubectl apply -f deploy.yaml` from failing if you
+# apply manifests manually — replace it before exposing the app.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vaultwarden
+  namespace: vaultwarden
+type: Opaque
+stringData:
+  admin-token: "CHANGE_ME_RUN_INSTALL_SH"
+  # Full public URL users will use, including https:// when behind a proxy.
+  # Example LAN value: http://192.168.1.50:8081
+  domain: "http://CHANGE_ME:8081"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vaultwarden
+  namespace: vaultwarden
+  labels:
+    app: vaultwarden
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: vaultwarden
+  template:
+    metadata:
+      labels:
+        app: vaultwarden
+    spec:
+      containers:
+        - name: vaultwarden
+          image: vaultwarden/server:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DOMAIN
+              valueFrom:
+                secretKeyRef:
+                  name: vaultwarden
+                  key: domain
+            # true only so you can create the first account; disable afterward
+            - name: SIGNUPS_ALLOWED
+              value: "true"
+            - name: SHOW_PASSWORD_HINT
+              value: "false"
+            - name: ADMIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vaultwarden
+                  key: admin-token
+          ports:
+            - name: http
+              containerPort: 80
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /alive
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: vaultwarden-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vaultwarden
+  namespace: vaultwarden
+spec:
+  type: LoadBalancer
+  selector:
+    app: vaultwarden
+  ports:
+    - name: http
+      port: 8081
+      targetPort: http
