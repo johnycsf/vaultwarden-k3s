@@ -112,3 +112,7 @@ This deletes the PVC and your vault database.
 
 - One replica only — the SQLite database in `/data` is not multi-writer.
 - Older versions of this repo told you to create Longhorn volumes manually and referenced a missing `vaultwarden-svc.yaml`. That is no longer needed: everything is in `deploy.yaml`, and the PVC uses the `longhorn` StorageClass for dynamic provisioning.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
