@@ -2,6 +2,8 @@
 
 Deploy [Vaultwarden](https://github.com/dani-garcia/vaultwarden) on a [Kubernetes](https://kubernetes.io/) homelab with almost no Kubernetes knowledge.
 
+Docker Compose version (no Kubernetes needed): [vaultwarden-docker](https://github.com/johnycsf/vaultwarden-docker)
+
 Vaultwarden is a lightweight, self-hosted [Bitwarden](https://bitwarden.com/)-compatible password manager server.
 
 This repo follows Vaultwarden’s current guidance:
