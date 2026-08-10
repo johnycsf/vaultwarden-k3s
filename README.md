@@ -1,6 +1,6 @@
-# vaultwarden-k3s
+# vaultwarden-k8s
 
-Deploy [Vaultwarden](https://github.com/dani-garcia/vaultwarden) on a [k3s](https://k3s.io/) homelab with almost no Kubernetes knowledge.
+Deploy [Vaultwarden](https://github.com/dani-garcia/vaultwarden) on a [Kubernetes](https://kubernetes.io/) homelab with almost no Kubernetes knowledge.
 
 Vaultwarden is a lightweight, self-hosted [Bitwarden](https://bitwarden.com/)-compatible password manager server.
 
@@ -14,7 +14,7 @@ This repo follows Vaultwarden’s current guidance:
 
 ## What you need
 
-1. A working **k3s** cluster (`kubectl` talks to it)
+1. A working **Kubernetes** cluster (`kubectl` talks to it)
 2. **Longhorn** storage (or change `storageClassName` in `deploy.yaml`)
 3. `openssl` (used by `install.sh` to generate the admin token)
 
@@ -34,8 +34,8 @@ Longhorn creates the volume automatically from the PVC. You do **not** need to c
 ## Install Vaultwarden
 
 ```bash
-git clone https://github.com/johnycsf/vaultwarden-k3s.git
-cd vaultwarden-k3s
+git clone https://github.com/johnycsf/vaultwarden-k8s.git
+cd vaultwarden-k8s
 chmod +x install.sh
 
 # Optional: set the public URL people will use (https recommended behind a reverse proxy)

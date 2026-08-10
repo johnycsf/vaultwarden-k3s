@@ -1,4 +1,4 @@
-# Vaultwarden on k3s — single-file deploy for a homelab
+# Vaultwarden on Kubernetes — single-file deploy for a homelab
 # Docs: https://github.com/dani-garcia/vaultwarden/wiki
 apiVersion: v1
 kind: Namespace

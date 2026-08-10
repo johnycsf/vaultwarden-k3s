@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install Vaultwarden on a k3s cluster with Longhorn storage.
+# Install Vaultwarden on a Kubernetes cluster with Longhorn storage.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
