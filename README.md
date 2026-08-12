@@ -6,6 +6,8 @@ Docker Compose version (no Kubernetes needed): [vaultwarden-docker](https://gith
 
 Vaultwarden is a lightweight, self-hosted [Bitwarden](https://bitwarden.com/)-compatible password manager server.
 
+Uses the **official** Vaultwarden project image [`vaultwarden/server`](https://hub.docker.com/r/vaultwarden/server) (not a third-party wrap).
+
 This repo follows Vaultwarden’s current guidance:
 
 - Image: `vaultwarden/server:latest`
