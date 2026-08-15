@@ -99,11 +99,15 @@ kubectl -n vaultwarden rollout status deployment/vaultwarden
 
 ## Update
 
+Keep the stack current (safe while pods are running; brief rollout downtime):
+
 ```bash
-kubectl -n vaultwarden set image deployment/vaultwarden \
-  vaultwarden=vaultwarden/server:latest
-kubectl -n vaultwarden rollout status deployment/vaultwarden
+chmod +x update.sh
+./update.sh
 ```
+
+This re-applies manifests, rolls Deployments so `:latest` images refresh, and prunes **unused** images on this machine when possible (k3s `crictl rmi --prune` or Docker dangling prune). PVCs and Secrets are left untouched.
+
 
 ## Uninstall
 
