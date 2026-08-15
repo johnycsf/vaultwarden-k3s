@@ -7,8 +7,12 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 NS=vaultwarden
 
+
 KEEP_FILE=".backup-keep-count"
 DEFAULT_KEEP=3
+BACKUP_ROOT="${ROOT}/backups"
+
+need() { command -v "$1" >/dev/null || { echo "Missing: $1" >&2; exit 1; }; }
 
 print_offsite_tip() {
   cat <<'EOF'
@@ -16,30 +20,46 @@ print_offsite_tip() {
 Tip: Local backups under backups/ can fill your disk over time.
 Copy important snapshots to an external drive, NAS, or cloud
 (rclone, Backblaze B2, S3, Nextcloud, etc.), then keep fewer copies here.
-Restore later with: ./restore.sh
+Restore later with:
+  ./backup.sh --restore --from ./backups
+  ./backup.sh --restore --from /mnt/usb/my-backups
 EOF
 }
 
 prune_old_backups() {
   local keep="$1"
-  mkdir -p backups
-  mapfile -t dirs < <(ls -1dt backups/update-* 2>/dev/null || true)
+  mkdir -p "${BACKUP_ROOT}/snapshots"
+  mapfile -t dirs < <(ls -1dt "${BACKUP_ROOT}"/snapshots/* 2>/dev/null || true)
+  # Also prune any leftover legacy update-* tarball folders from older scripts
+  mapfile -t legacy < <(ls -1dt "${BACKUP_ROOT}"/update-* 2>/dev/null || true)
   local total="${#dirs[@]}"
-  if (( total <= keep )); then
-    echo "Backup retention: keeping all ${total} local snapshot(s) (limit ${keep})."
-    return 0
+  if (( total > keep )); then
+    local i
+    for (( i = keep; i < total; i++ )); do
+      echo "Removing old snapshot: ${dirs[$i]}"
+      rm -rf "${dirs[$i]}"
+    done
+    echo "Backup retention: kept ${keep} newest snapshot(s); removed $((total - keep)) older one(s)."
+  else
+    echo "Backup retention: keeping all ${total} snapshot(s) (limit ${keep})."
   fi
-  local i
-  for (( i = keep; i < total; i++ )); do
-    echo "Removing old backup: ${dirs[$i]}"
-    rm -rf "${dirs[$i]}"
-  done
-  echo "Backup retention: kept ${keep} newest snapshot(s); removed $((total - keep)) older one(s)."
+  if ((${#legacy[@]} > 0)); then
+    echo "Note: found ${#legacy[@]} legacy backups/update-* folder(s)."
+    echo "  Restore those manually via their RESTORE.txt, or delete them to free space."
+  fi
+  # Refresh latest symlink if needed
+  if [[ -d "${BACKUP_ROOT}/snapshots" ]]; then
+    local newest
+    newest="$(ls -1dt "${BACKUP_ROOT}"/snapshots/* 2>/dev/null | head -1 || true)"
+    if [[ -n "$newest" ]]; then
+      ln -sfn "snapshots/$(basename "$newest")" "${BACKUP_ROOT}/latest"
+    fi
+  fi
 }
 
 ask_backup_retention() {
   local dir="$1"
-  if [[ ! -d "${dir}" ]]; then
+  if [[ -z "${dir}" || ! -e "${dir}" ]]; then
     return 0
   fi
   if [[ ! -t 0 ]]; then
@@ -58,7 +78,19 @@ ask_backup_retention() {
   case "${reply:-Y}" in
     n|N|no|NO)
       rm -rf "${dir}"
-      rmdir backups 2>/dev/null || true
+      # fix latest pointer
+      if [[ -L "${BACKUP_ROOT}/latest" ]]; then
+        local cur
+        cur="$(readlink -f "${BACKUP_ROOT}/latest" 2>/dev/null || true)"
+        if [[ "$cur" == "$dir" ]]; then
+          rm -f "${BACKUP_ROOT}/latest"
+          local newest
+          newest="$(ls -1dt "${BACKUP_ROOT}"/snapshots/* 2>/dev/null | head -1 || true)"
+          [[ -n "$newest" ]] && ln -sfn "snapshots/$(basename "$newest")" "${BACKUP_ROOT}/latest"
+        fi
+      fi
+      rmdir "${BACKUP_ROOT}/snapshots" 2>/dev/null || true
+      rmdir "${BACKUP_ROOT}" 2>/dev/null || true
       echo "Backup deleted."
       ;;
     *)
@@ -67,58 +99,40 @@ ask_backup_retention() {
       [[ -f "${KEEP_FILE}" ]] && default="$(tr -dc '0-9' <"${KEEP_FILE}" || true)"
       [[ -z "${default}" ]] && default="${DEFAULT_KEEP}"
       local keep=""
-      read -r -p "How many local update backups should we keep on this disk? [${default}] " keep || true
+      read -r -p "How many local backups should we keep on this disk? [${default}] " keep || true
       keep="$(printf '%s' "${keep:-$default}" | tr -dc '0-9')"
       [[ -z "${keep}" || "${keep}" -lt 1 ]] && keep="${default}"
       echo "${keep}" >"${KEEP_FILE}"
       prune_old_backups "${keep}"
       print_offsite_tip
       echo "  This snapshot: ${dir}"
-      echo "  Manual restore: ./restore.sh"
+      echo "  Manual restore: ./backup.sh --restore --from ./backups"
       ;;
   esac
 }
 
-
-need() {
-  command -v "$1" >/dev/null 2>&1 || {
-    echo "Missing required command: $1" >&2
-    exit 1
-  }
-}
-
-
 create_backup() {
-  BACKUP_DIR="${ROOT}/backups/update-$(date +%Y%m%d-%H%M%S)"
-  mkdir -p "${BACKUP_DIR}"
-  echo "==> Creating rollback backup in ${BACKUP_DIR} ..."
-  cp -a "${ROOT}/deploy.yaml" "${BACKUP_DIR}/" 2>/dev/null || true
-  [[ -f "${ROOT}/.admin-token" ]] && cp -a "${ROOT}/.admin-token" "${BACKUP_DIR}/"
-  kubectl -n "$NS" get secret vaultwarden -o yaml >"${BACKUP_DIR}/secret-vaultwarden.yaml" 2>/dev/null || true
-  kubectl -n "$NS" get deploy,svc,pvc -o yaml >"${BACKUP_DIR}/resources.yaml" 2>/dev/null || true
-
-  local pod
-  pod="$(kubectl -n "$NS" get pod -l app=vaultwarden -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
-  if [[ -n "${pod}" ]]; then
-    echo "    Archiving /data from pod ${pod} ..."
-    kubectl -n "$NS" exec "${pod}" -- tar -C /data -czf - . >"${BACKUP_DIR}/data.tar.gz" \
-      || echo "    Warning: could not archive pod /data"
-  else
-    echo "    Warning: no running Vaultwarden pod — skipped PVC data archive"
+  if [[ ! -x "${ROOT}/backup.sh" ]]; then
+    echo "Missing executable backup.sh (required for pre-update snapshots)." >&2
+    exit 1
   fi
-
-  cat >"${BACKUP_DIR}/RESTORE.txt" <<EOF
-Prefer: ./restore.sh
-
-Manual Vaultwarden k8s rollback (data + secret):
-
-  kubectl -n vaultwarden apply -f ${BACKUP_DIR}/secret-vaultwarden.yaml
-  POD=\$(kubectl -n vaultwarden get pod -l app=vaultwarden -o jsonpath='{.items[0].metadata.name}')
-  kubectl -n vaultwarden exec -i "\$POD" -- tar -C /data -xzf - < ${BACKUP_DIR}/data.tar.gz
-  kubectl -n vaultwarden rollout restart deployment/vaultwarden
-EOF
+  local keep="${DEFAULT_KEEP}"
+  [[ -f "${KEEP_FILE}" ]] && keep="$(tr -dc '0-9' <"${KEEP_FILE}" || true)"
+  [[ -z "${keep}" ]] && keep="${DEFAULT_KEEP}"
+  echo "==> Pre-update snapshot via ./backup.sh --dest ${BACKUP_ROOT} ..."
+  "${ROOT}/backup.sh" --dest "${BACKUP_ROOT}" --keep "${keep}"
+  if [[ -L "${BACKUP_ROOT}/latest" ]]; then
+    BACKUP_DIR="$(readlink -f "${BACKUP_ROOT}/latest")"
+  else
+    BACKUP_DIR="$(ls -1dt "${BACKUP_ROOT}"/snapshots/* 2>/dev/null | head -1 || true)"
+  fi
+  if [[ -z "${BACKUP_DIR}" || ! -d "${BACKUP_DIR}" ]]; then
+    echo "Pre-update backup did not produce a snapshot." >&2
+    exit 1
+  fi
   echo "Backup ready: ${BACKUP_DIR}"
 }
+
 
 need kubectl
 
