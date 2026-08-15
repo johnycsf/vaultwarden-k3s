@@ -1,5 +1,7 @@
 # vaultwarden-k8s
 
+![Repobeats analytics image](https://repobeats.axiom.co/api/embed/247d48e72935c9b9dab1c7a36b8d34ecf3890679.svg "Repobeats analytics image")
+
 Deploy [Vaultwarden](https://github.com/dani-garcia/vaultwarden) on a [Kubernetes](https://kubernetes.io/) homelab with almost no Kubernetes knowledge.
 
 Docker Compose version (no Kubernetes needed): [vaultwarden-docker](https://github.com/johnycsf/vaultwarden-docker)
@@ -117,9 +119,6 @@ This deletes the PVC and your vault database.
 - One replica only — the SQLite database in `/data` is not multi-writer.
 - Older versions of this repo told you to create Longhorn volumes manually and referenced a missing `vaultwarden-svc.yaml`. That is no longer needed: everything is in `deploy.yaml`, and the PVC uses the `longhorn` StorageClass for dynamic provisioning.
 
-## Repository activity
-
-![Repobeats analytics image](https://repobeats.axiom.co/api/embed/247d48e72935c9b9dab1c7a36b8d34ecf3890679.svg "Repobeats analytics image")
 
 ## Contributing
 
