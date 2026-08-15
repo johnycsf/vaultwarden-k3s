@@ -37,6 +37,11 @@ Fresh-machine workflow:
   1) Install this stack on the new host (./install.sh) so runtime exists.
   2) ./backup.sh --restore --from /mnt/usb/my-backups
   3) Script replaces data/secrets and finishes app-specific repair (e.g. Nextcloud scan).
+
+Database safety:
+  MariaDB/Nextcloud  — logical dump (--single-transaction), never live datadir copy.
+  SQLite apps       — service stopped/scaled down, WAL checkpoint, then file copy.
+  Incremental rsync applies to files; each MariaDB dump is a full verified SQL file.
 EOF
 }
 
@@ -175,6 +180,46 @@ EOF
 
 
 
+# --- SQLite safety (stop/quiesce, checkpoint WAL, then copy; never copy a live DB) ---
+sqlite_checkpoint_tree() {
+  local root="$1"
+  command -v sqlite3 >/dev/null 2>&1 || {
+    echo "    sqlite3 CLI not on host — relying on stopped service + full file copy (incl. -wal/-shm)."
+    return 0
+  }
+  local db count=0
+  while IFS= read -r -d '' db; do
+    echo "    Checkpointing SQLite: $db"
+    sqlite3 "$db" "PRAGMA wal_checkpoint(TRUNCATE);" >/dev/null
+    count=$((count + 1))
+  done < <(find "$root" -type f \( -name '*.sqlite' -o -name '*.sqlite3' -o -name 'db.sqlite3' -o -name 'app.sqlite' \) -print0 2>/dev/null)
+  echo "    Checkpointed ${count} SQLite file(s)."
+}
+
+verify_sqlite_tree() {
+  local root="$1"
+  local found=0
+  local db
+  while IFS= read -r -d '' db; do
+    found=1
+    if [[ ! -s "$db" ]]; then
+      echo "SQLite file empty after backup: $db" >&2
+      return 1
+    fi
+    if command -v sqlite3 >/dev/null 2>&1; then
+      sqlite3 "$db" "PRAGMA integrity_check;" | grep -qx 'ok' || {
+        echo "SQLite integrity_check failed: $db" >&2
+        return 1
+      }
+    fi
+    echo "    OK SQLite: $db ($(wc -c <"$db" | tr -d ' ') bytes)"
+  done < <(find "$root" -type f \( -name '*.sqlite' -o -name '*.sqlite3' -o -name 'db.sqlite3' -o -name 'app.sqlite' \) -print0 2>/dev/null)
+  if [[ "$found" -eq 0 ]]; then
+    echo "Warning: no SQLite DB file found under $root (app may be empty/new)." >&2
+  fi
+}
+
+
 pull_pod_tree() {
   local pod="$1" remote="$2" dest="$3"
   mkdir -p "$dest"
@@ -194,6 +239,7 @@ do_backup() {
   DEST="$(mkdir -p "$DEST" && cd "$DEST" && pwd)"
   prepare_snapshot_dirs "$DEST"
   echo "==> Snapshot ${SNAP_NAME} -> ${SNAP_DIR}"
+  echo "==> DB strategy: scale to 0, SQLite WAL checkpoint, then incremental copy."
   # Brief scale-down for consistent SQLite
   restore_vw_service() {
     kubectl -n "$NS" delete pod vw-backup-helper --ignore-not-found >/dev/null 2>&1 || true
@@ -232,15 +278,24 @@ EOF
   local staging
   staging="$(mktemp -d)"
   pull_pod_tree vw-backup-helper /data "${staging}/files"
+  sqlite_checkpoint_tree "${staging}/files"
   local prev_files=""
   [[ -n "${PREV_LINK}" && -d "${PREV_LINK}/files" ]] && prev_files="${PREV_LINK}/files"
   rsync_incremental "${staging}/files" "${SNAP_DIR}/files" "${prev_files}"
+  verify_sqlite_tree "${SNAP_DIR}/files"
   rm -rf "$staging"
 
   kubectl -n "$NS" get secret vaultwarden -o yaml >"${SNAP_DIR}/secret-vaultwarden.yaml" 2>/dev/null || true
   [[ -f "${ROOT}/.admin-token" ]] && cp -a "${ROOT}/.admin-token" "${SNAP_DIR}/"
   cp -a "${ROOT}/deploy.yaml" "${SNAP_DIR}/" 2>/dev/null || true
-  write_meta "${SNAP_DIR}" "$STACK_ID" "vaultwarden /data + secret"
+  cat >"${SNAP_DIR}/META.txt" <<EOF
+stack=${STACK_ID}
+created=$(date -Iseconds)
+host=$(hostname 2>/dev/null || echo unknown)
+note=vaultwarden /data after scale-0 + sqlite checkpoint
+db_engine=sqlite
+db_method=scale0+wal_checkpoint+rsync
+EOF
 
   trap - EXIT
   restore_vw_service
