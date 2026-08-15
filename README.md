@@ -20,9 +20,11 @@ This repo follows Vaultwarden’s current guidance:
 
 ## What you need
 
-1. A working **Kubernetes** cluster (`kubectl` talks to it)
-2. **Longhorn** storage (or change `storageClassName` in `deploy.yaml`)
-3. `openssl` (used by `install.sh` to generate the admin token)
+- A Kubernetes cluster (`kubectl` context already set)
+- `sudo` on this machine so `./install.sh` can install missing tools (kubectl, helm, curl, openssl, rsync, …)
+- Disk for PersistentVolumes (Longhorn is installed automatically if the `longhorn` StorageClass is missing)
+
+`./install.sh` detects your OS and installs host dependencies automatically.
 
 ## One-time: install Longhorn
 
