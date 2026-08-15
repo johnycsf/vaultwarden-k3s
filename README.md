@@ -120,6 +120,26 @@ chmod +x restore.sh
 This re-applies manifests, rolls Deployments so `:latest` images refresh, and prunes **unused** images on this machine when possible (k3s `crictl rmi --prune` or Docker dangling prune). PVCs and Secrets are left untouched.
 
 
+
+## Disaster recovery (full backup / restore)
+
+Incremental snapshots via `rsync` hardlinks (unchanged files are not re-copied). Separate from `update.sh` rollback tarballs.
+
+```bash
+chmod +x backup.sh
+
+# Backup to USB/NAS/external path (repeat anytime; later runs are incremental)
+./backup.sh --dest /mnt/usb/vaultwarden-k8s-backups
+./backup.sh --dest /mnt/usb/vaultwarden-k8s-backups --keep 5   # optional: retain only newest N
+
+# On a brand-new machine/cluster after ./install.sh:
+./backup.sh --restore --from /mnt/usb/vaultwarden-k8s-backups
+# or a specific snapshot:
+./backup.sh --restore --from /mnt/usb/vaultwarden-k8s-backups/snapshots/YYYYMMDD-HHMMSS
+```
+
+Keep the backup root on **one filesystem** so hardlinks work. Prefer an external drive, NAS, or cloud sync of that folder.
+
 ## Uninstall
 
 ```bash
