@@ -1,3 +1,4 @@
 .admin-token
 .env
 *.local
+backups/

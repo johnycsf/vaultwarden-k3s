@@ -106,6 +106,8 @@ chmod +x update.sh
 ./update.sh
 ```
 
+Before changing anything, the script writes a timestamped rollback copy under `backups/` and, after a successful update, asks whether to **keep** or **delete** it.
+
 This re-applies manifests, rolls Deployments so `:latest` images refresh, and prunes **unused** images on this machine when possible (k3s `crictl rmi --prune` or Docker dangling prune). PVCs and Secrets are left untouched.
 
 
