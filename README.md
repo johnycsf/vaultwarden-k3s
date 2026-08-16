@@ -178,6 +178,10 @@ This deletes the PVC and your vault database.
 - Older versions of this repo told you to create Longhorn volumes manually and referenced a missing `vaultwarden-svc.yaml`. That is no longer needed: everything is in `deploy.yaml`, and the PVC uses the `longhorn` StorageClass for dynamic provisioning.
 
 
+## Credits
+
+This repo packages or configures upstream software. See [CREDITS.md](CREDITS.md) for the main developers and projects this work builds on.
+
 ## Disclaimer
 
 This project is provided **as is**. The author is **not responsible** for any loss, damage, data corruption, downtime, security issues, or other consequences from using it. Full text: [DISCLAIMER.md](DISCLAIMER.md).
