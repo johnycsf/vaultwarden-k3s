@@ -75,6 +75,10 @@ kubectl -n longhorn-system get pod
 
 Longhorn creates the volume automatically from the PVC. You do **not** need to create a volume by hand in the Longhorn UI.
 
+## Interactive control center
+
+`./manage.sh` opens an **arrow-key menu** (↑↓ + Enter) powered by [gum](https://github.com/charmbracelet/gum). If gum isn’t installed yet, the script installs it automatically (or falls back to whiptail / a numbered list).
+
 ## Install Vaultwarden
 
 ```bash
