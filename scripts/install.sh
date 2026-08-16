@@ -4,9 +4,9 @@
 # Does NOT rotate ADMIN_TOKEN on re-run if the Secret already exists.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=deps.sh
-source "${ROOT}/deps.sh"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/deps.sh
+source "${ROOT}/scripts/deps.sh"
 
 ui_banner "Vaultwarden" "Kubernetes · storage + replicas chosen interactively"
 ui_steps_init 5
@@ -79,4 +79,4 @@ ui_info "URL:   ${UI_BOLD}${DOMAIN}${UI_RESET}"
 ui_info "Admin: ${UI_BOLD}${DOMAIN}/admin${UI_RESET}"
 ui_info "Token: ${TOKEN_FILE}"
 ui_info "After first account: kubectl -n vaultwarden set env deployment/vaultwarden SIGNUPS_ALLOWED=false"
-ui_info "Re-run ./install.sh anytime to change replicas or storage preference"
+ui_info "Re-run ./manage.sh anytime to change replicas or storage preference"

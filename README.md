@@ -38,8 +38,8 @@ This repo follows Vaultwarden’s current guidance:
 - Interactive colored install with step progress
 - Auto-detects your OS and installs missing host tools (`kubectl`, `helm`, …)
 - Choose **StorageClass** and **replica count** (re-run anytime to change)
-- Safe **`./update.sh`** with automatic pre-update backup
-- Incremental hardlink **`./backup.sh`** + restore
+- Safe **`./manage.sh update`** with automatic pre-update backup
+- Incremental hardlink **`./manage.sh backup`** + restore
 - **Official upstream images only**
 
 ## Support this work
@@ -57,10 +57,10 @@ If this stack saved you setup time, please consider sponsoring — it funds:
 ## What you need
 
 - A Kubernetes cluster (`kubectl` context already set)
-- `sudo` on this machine so `./install.sh` can install missing tools (kubectl, helm, curl, openssl, rsync, …)
+- `sudo` on this machine so `./manage.sh` can install missing tools (kubectl, helm, curl, openssl, rsync, …)
 - Disk for PersistentVolumes
 
-`./install.sh` is interactive (colors + step progress). It asks for **StorageClass** and **replica count** (with a safe per-app suggestion). Re-run it later to change those choices. Non-interactive: `STORAGE_CLASS=longhorn REPLICAS=1 ./install.sh`.
+`./manage.sh` is interactive (colors + step progress). It asks for **StorageClass** and **replica count** (with a safe per-app suggestion). Re-run it later to change those choices. Non-interactive: `STORAGE_CLASS=longhorn REPLICAS=1 ./manage.sh`.
 
 ## One-time: install Longhorn
 
@@ -84,9 +84,9 @@ Longhorn creates the volume automatically from the PVC. You do **not** need to c
 ```bash
 git clone https://github.com/johnycsf/vaultwarden-k8s.git
 cd vaultwarden-k8s
-chmod +x manage.sh install.sh
+chmod +x manage.sh
 ./manage.sh          # interactive control center
-# or: DOMAIN=http://192.168.1.50:8081 ./install.sh
+# or: DOMAIN=http://192.168.1.50:8081 ./manage.sh
 ```
 
 If you omit `DOMAIN`, the script uses `http://<first-node-internal-ip>:8081`.
@@ -146,39 +146,36 @@ kubectl -n vaultwarden rollout status deployment/vaultwarden
 Keep the stack current (safe while pods are running; brief rollout downtime):
 
 ```bash
-chmod +x update.sh
-./update.sh
+./manage.sh update
 ```
 
-Before changing anything, the script runs `./backup.sh` into `./backups` (incremental, database-safe). After a successful update it asks whether to **keep** or **delete** that snapshot, and how many local copies to retain (older ones are pruned). Copy important backups to an external drive, NAS, or cloud so they do not fill this disk.
+Before changing anything, the script runs `./manage.sh backup` into `./backups` (incremental, database-safe). After a successful update it asks whether to **keep** or **delete** that snapshot, and how many local copies to retain (older ones are pruned). Copy important backups to an external drive, NAS, or cloud so they do not fill this disk.
 
 To roll back later (same tool as disaster recovery):
 
 ```bash
-./backup.sh --restore --from ./backups
+./manage.sh backup --restore --from ./backups
 # or from an external copy:
-./backup.sh --restore --from /mnt/usb/my-backups
+./manage.sh backup --restore --from /mnt/usb/my-backups
 ```
 
-Older `backups/update-*` tarball folders (from previous script versions) are no longer used by `./update.sh`; use each folder's `RESTORE.txt` if you still need one, or delete them to free space.
+Older `backups/update-*` tarball folders (from previous script versions) are no longer used by `./manage.sh update`; use each folder's `RESTORE.txt` if you still need one, or delete them to free space.
 
 This re-applies manifests, rolls Deployments so `:latest` images refresh, and prunes **unused** images on this machine when possible (k3s `crictl rmi --prune` or Docker dangling prune). PVCs and Secrets are left untouched.
 
 ## Disaster recovery (full backup / restore)
 
-Incremental snapshots via `rsync` hardlinks (unchanged files are not re-copied). `./update.sh` uses this same `backup.sh` before updating (into `./backups`).
+Incremental snapshots via `rsync` hardlinks (unchanged files are not re-copied). `./manage.sh update` uses this same `backup.sh` before updating (into `./backups`).
 
 ```bash
-chmod +x backup.sh
-
 # Backup to USB/NAS/external path (repeat anytime; later runs are incremental)
-./backup.sh --dest /mnt/usb/vaultwarden-k8s-backups
-./backup.sh --dest /mnt/usb/vaultwarden-k8s-backups --keep 5   # optional: retain only newest N
+./manage.sh backup --dest /mnt/usb/vaultwarden-k8s-backups
+./manage.sh backup --dest /mnt/usb/vaultwarden-k8s-backups --keep 5   # optional: retain only newest N
 
-# On a brand-new machine/cluster after ./install.sh:
-./backup.sh --restore --from /mnt/usb/vaultwarden-k8s-backups
+# On a brand-new machine/cluster after ./manage.sh:
+./manage.sh backup --restore --from /mnt/usb/vaultwarden-k8s-backups
 # or a specific snapshot:
-./backup.sh --restore --from /mnt/usb/vaultwarden-k8s-backups/snapshots/YYYYMMDD-HHMMSS
+./manage.sh backup --restore --from /mnt/usb/vaultwarden-k8s-backups/snapshots/YYYYMMDD-HHMMSS
 ```
 
 Each snapshot includes `SHA256SUMS` plus a `snapshot_sha256` key in `META.txt`. Restore verifies these and **warns** (does not abort) if integrity is lost.
@@ -215,7 +212,7 @@ If you hit an error, please [open a GitHub Issue](../../issues/new/choose) and f
 
 ## Backup exports
 
-Local snapshots stay as incremental hardlink trees (fast rollback). Optionally create a compressed offsite copy with `./backup.sh --dest ./backups --archive tar.gz|tar.xz|zip` (add `--archive-password` for zip password or age-passphrase on tar). For stronger key-based encryption use `--encrypt` (age). See repo-framework `docs/BACKUP_ENCRYPTION.md`.
+Local snapshots stay as incremental hardlink trees (fast rollback). Optionally create a compressed offsite copy with `./manage.sh backup --dest ./backups --archive tar.gz|tar.xz|zip` (add `--archive-password` for zip password or age-passphrase on tar). For stronger key-based encryption use `--encrypt` (age). See repo-framework `docs/BACKUP_ENCRYPTION.md`.
 
 ## Security
 

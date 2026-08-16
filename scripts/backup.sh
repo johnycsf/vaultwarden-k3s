@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Disaster-recovery backup/restore with incremental rsync snapshots (k8s).
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=deps.sh
-source "${ROOT}/deps.sh"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/deps.sh
+source "${ROOT}/scripts/deps.sh"
 cd "$ROOT"
-# shellcheck source=backup-encrypt.sh
-source "${ROOT}/backup-encrypt.sh"
+# shellcheck source=scripts/backup-encrypt.sh
+source "${ROOT}/scripts/backup-encrypt.sh"
 NS=vaultwarden
 STACK_ID="vaultwarden-k8s"
 
@@ -24,11 +24,11 @@ need_rsync() {
 usage() {
   cat <<EOF
 Usage:
-  ./backup.sh --dest /path/to/backup-root [--keep N]
-  ./backup.sh --restore --from /path/to/backup-root-or-snapshot
-  ./backup.sh --help
+  ./manage.sh backup --dest /path/to/backup-root [--keep N]
+  ./manage.sh backup --restore --from /path/to/backup-root-or-snapshot
+  ./manage.sh backup --help
 
-Disaster-recovery backups (also used by ./update.sh for pre-update snapshots into ./backups).
+Disaster-recovery backups (also used by ./manage.sh update for pre-update snapshots into ./backups).
 
   --dest DIR    Create a new incremental snapshot under DIR.
                 Uses rsync hardlinks against the previous snapshot so
@@ -54,8 +54,8 @@ Disaster-recovery backups (also used by ./update.sh for pre-update snapshots int
   *.tar.gz.age / *.tar.xz.age / *.tar.age / *.age.
 
 Fresh-machine workflow:
-  1) Install this stack on the new host (./install.sh) so runtime exists.
-  2) ./backup.sh --restore --from /mnt/usb/my-backups
+  1) Install this stack on the new host (./manage.sh) so runtime exists.
+  2) ./manage.sh backup --restore --from /mnt/usb/my-backups
   3) Script replaces data/secrets and finishes app-specific repair (e.g. Nextcloud scan).
 
 Database safety:
@@ -462,7 +462,7 @@ do_restore() {
   verify_snapshot_integrity "$snap"
   [[ -d "${snap}/files" ]] || { echo "Missing files/" >&2; exit 1; }
   echo
-  echo "Recommended: ./install.sh on the new cluster first, then restore."
+  echo "Recommended: ./manage.sh on the new cluster first, then restore."
   read -r -p "Type 'restore' to continue: " confirm || true
   [[ "${confirm}" == "restore" ]] || { echo "Aborted."; exit 1; }
 
