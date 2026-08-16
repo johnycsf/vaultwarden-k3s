@@ -149,6 +149,7 @@ create_backup
 
 echo "==> Applying manifests (keeps existing Secret / PVC)..."
 apply_manifest "${ROOT}/deploy.yaml"
+apply_saved_replicas vaultwarden
 echo "==> Rolling out new pods (picks up newer :latest digests)..."
 kubectl -n vaultwarden rollout restart deployment/vaultwarden
 kubectl -n vaultwarden rollout status deployment/vaultwarden --timeout=180s
