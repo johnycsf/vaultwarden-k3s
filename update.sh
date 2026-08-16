@@ -136,10 +136,9 @@ create_backup() {
 
 need kubectl
 
-if ! kubectl get storageclass longhorn >/dev/null 2>&1; then
-  echo "Longhorn StorageClass not found — fix storage before updating." >&2
-  exit 1
-fi
+# shellcheck source=deps.sh
+source "${ROOT}/deps.sh"
+require_storage_class
 
 if ! kubectl -n vaultwarden get deploy vaultwarden >/dev/null 2>&1; then
   echo "Vaultwarden is not installed yet. Run ./install.sh first." >&2
@@ -149,7 +148,7 @@ fi
 create_backup
 
 echo "==> Applying manifests (keeps existing Secret / PVC)..."
-kubectl apply -f "${ROOT}/deploy.yaml"
+apply_manifest "${ROOT}/deploy.yaml"
 echo "==> Rolling out new pods (picks up newer :latest digests)..."
 kubectl -n vaultwarden rollout restart deployment/vaultwarden
 kubectl -n vaultwarden rollout status deployment/vaultwarden --timeout=180s

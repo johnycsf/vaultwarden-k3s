@@ -2,6 +2,8 @@
 # Disaster-recovery backup/restore with incremental rsync snapshots (k8s).
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=deps.sh
+source "${ROOT}/deps.sh"
 cd "$ROOT"
 NS=vaultwarden
 STACK_ID="vaultwarden-k8s"
@@ -418,7 +420,7 @@ do_restore() {
   [[ "${confirm}" == "restore" ]] || { echo "Aborted."; exit 1; }
 
   if ! kubectl -n "$NS" get deploy vaultwarden >/dev/null 2>&1; then
-    kubectl apply -f "${ROOT}/deploy.yaml"
+    apply_manifest "${ROOT}/deploy.yaml"
   fi
   if [[ -f "${snap}/secret-vaultwarden.yaml" ]]; then
     kubectl -n "$NS" apply -f "${snap}/secret-vaultwarden.yaml"

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Install Vaultwarden on a Kubernetes cluster with Longhorn storage.
+# Install Vaultwarden on a Kubernetes cluster (storage class chosen at install time).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=deps.sh
 source "${ROOT}/deps.sh"
 ensure_host_deps k8s sqlite3
-ensure_longhorn_storage
+configure_k8s_storage
 
 DOMAIN="${DOMAIN:-}"
 if [[ -z "${DOMAIN}" ]]; then
@@ -23,7 +23,7 @@ fi
 ADMIN_TOKEN="$(openssl rand -base64 48 | tr -d '\n')"
 
 echo "Applying base manifests..."
-kubectl apply -f "${ROOT}/deploy.yaml"
+apply_manifest "${ROOT}/deploy.yaml"
 
 echo "Writing generated Secret (DOMAIN + ADMIN_TOKEN)..."
 kubectl -n vaultwarden create secret generic vaultwarden \
