@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=scripts/deps.sh
 source "${ROOT}/scripts/deps.sh"
 
-ui_banner "Vaultwarden" "Kubernetes · storage + replicas chosen interactively"
+ui_banner "Vaultwarden" "Kubernetes - storage + replicas chosen interactively"
 ui_steps_init 5
 
 ui_step "Checking host dependencies"
@@ -23,7 +23,7 @@ configure_k8s_replicas vaultwarden
 ALREADY=false
 if kubectl -n vaultwarden get deploy vaultwarden >/dev/null 2>&1; then
   ALREADY=true
-  ui_info "Existing Vaultwarden Deployment found — refreshing manifests/replicas"
+  ui_info "Existing Vaultwarden Deployment found - refreshing manifests/replicas"
 fi
 
 DOMAIN="${DOMAIN:-}"
@@ -65,7 +65,7 @@ else
     --dry-run=client -o yaml | kubectl apply -f -
   umask 077
   printf '%s\n' "${ADMIN_TOKEN}" >"${TOKEN_FILE}"
-  ui_ok "Generated admin token → ${TOKEN_FILE}"
+  ui_ok "Generated admin token -> ${TOKEN_FILE}"
   ui_run "Restart to pick up Secret" kubectl -n vaultwarden rollout restart deployment/vaultwarden
 fi
 
