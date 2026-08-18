@@ -463,6 +463,15 @@ _firewall_open_ufw() {
   ui_info "Run: sudo ufw allow ${port}/tcp"
 }
 
+ensure_sudo_cached() {
+  if command -v sudo >/dev/null 2>&1 && [[ -t 0 ]] && [[ "${SKIP_SUDO_PROMPT:-}" != "1" ]]; then
+    ui_info "Requesting sudo to cache credentials (may prompt)."
+    if ! sudo -v 2>/dev/null; then
+      ui_warn "sudo not available or authentication failed; operations may prompt later."
+    fi
+  fi
+}
+
 ensure_host_firewall_tcp_port() {
   # Open the TCP port on whichever host firewall is active. Rootless Podman does
   # not auto-open host firewall ports the way Docker often does - without this
@@ -1908,6 +1917,7 @@ uninstall_docker_stack() {
 uninstall_k8s_stack() {
   local title="$1" ns="$2"
   ui_banner "${title}" "Uninstall ${UI_SYM_DOT} Kubernetes (ns=${ns})"
+  ensure_sudo_cached
   ui_warn "This deletes the namespace workloads. PVCs/data may remain until you delete them."
   confirm_destructive "uninstall" || { ui_info "Cancelled."; return 1; }
 
