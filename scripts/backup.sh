@@ -408,7 +408,7 @@ spec:
   restartPolicy: Never
   containers:
     - name: helper
-      image: docker.io/vaultwarden/server:latest
+      image: ${IMAGE_REGISTRY:-docker.io}/vaultwarden/server:latest
       command: ["sleep", "3600"]
       volumeMounts:
         - name: data
@@ -490,7 +490,7 @@ spec:
   restartPolicy: Never
   containers:
     - name: helper
-      image: docker.io/vaultwarden/server:latest
+      image: ${IMAGE_REGISTRY:-docker.io}/vaultwarden/server:latest
       command: ["sleep", "3600"]
       volumeMounts:
         - name: data
