@@ -54,7 +54,7 @@ spec:
     spec:
       containers:
         - name: vaultwarden
-          image: vaultwarden/server:latest
+          image: docker.io/vaultwarden/server:latest
           imagePullPolicy: IfNotPresent
           env:
             - name: DOMAIN
